@@ -16,28 +16,28 @@ iv = io.recvline().strip().decode()
 print("ct:", ct)
 print("iv:", iv)
 
+# CBC mode for the first two blocks
 io.sendlineafter(b">>> ", b"1")
-data = b"0"*64
+data = b"00" * 32
 io.sendlineafter(b"Data: ", data)
-params = '{"mode": 3, "iv": "' + iv + '", "segment_size": 128}'
-io.sendlineafter(b"Params: ", params)
+params = '{"mode": 2, "iv": "' + iv + '"}'
+io.sendlineafter(b"Params: ", params.encode())
 io.recvuntil(b"Result: ")
-key1 = io.recvline().strip().decode()
-print("key1:", key1)
+first_part = io.recvline().strip().decode()
 
+# CFB mode for the last two blocks
 io.sendlineafter(b">>> ", b"1")
-data = (key1[32:] + "0" * 32).encode()
+data = b"00" * 32
 io.sendlineafter(b"Data: ", data)
-params = '{"mode": 2, "iv": "' + "0"*32 + '"}'
-io.sendlineafter(b"Params: ", params)
+params = '{"mode": 3, "iv": "' + first_part[32:] + '", "segment_size": 128}'
+io.sendlineafter(b"Params: ", params.encode())
 io.recvuntil(b"Result: ")
-key2 = io.recvline().strip().decode()
-print("key2:", key2)
+second_part = io.recvline().strip().decode()
 
-fullkey = key1 + key2
+fullkey = first_part + second_part
 password = repeatingXor(bytes.fromhex(ct), bytes.fromhex(fullkey))
+print("Password:", password)
 
 io.sendlineafter(b">>> ", b"3")
 io.sendlineafter(b"Guess: ", password)
 io.interactive()
-# 
